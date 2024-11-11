@@ -7,12 +7,18 @@ using UnityEngine;
 public class Hero : MonoBehaviour {
     [SerializeField] private float speed = 3.0f;
     [SerializeField] private int lives = 5;
-    [SerializeField] private float jumpForce = 1.0f;
+    [SerializeField] private float jumpHeight = 2f;
+    [SerializeField] private float gravityScale = 2f;
+
     private bool isGrounded = false;
+    private bool isJumping = false;
+    private const float maxJumpTime = 0.5f;
 
     private Rigidbody2D rb;
     private Animator anim;
     private SpriteRenderer sprite;
+
+    [SerializeField] private LayerMask PlayerMask;
 
     private States State {
         get { return (States)anim.GetInteger("state"); }
@@ -37,7 +43,10 @@ public class Hero : MonoBehaviour {
         if (Input.GetButton("Horizontal"))
             Run();
         if (isGrounded && Input.GetButton("Jump"))
-            Jump();
+            if(!isJumping)
+                Jump();
+
+
     }
 
     private void Run() {
@@ -52,20 +61,26 @@ public class Hero : MonoBehaviour {
     }
 
     private void Jump() {
-        rb.AddForce(transform.up * jumpForce, ForceMode2D.Impulse);
+        // Вычисляем начальную скорость для достижения желаемой высоты
+        float jumpVelocity = Mathf.Sqrt(2 * jumpHeight * Mathf.Abs(Physics2D.gravity.y) * gravityScale);
+        rb.velocity = new Vector2(rb.velocity.x, jumpVelocity);
+        isJumping = true;
     }
 
     private void CheckGround() {
-        Collider2D[] collider = Physics2D.OverlapCircleAll(transform.position, 0.2f);
-        isGrounded = collider.Length > 1;
-        if (!isGrounded)
+        isGrounded = Physics2D.OverlapCircle(transform.position, 0.4f, PlayerMask);
+
+        if (!isGrounded) {
             State = States.jump;
+        } else {
+            isJumping = false;
+        }
     }
 
     private void OnDrawGizmos() {
         Gizmos.color = Color.yellow;
 
-        Gizmos.DrawWireSphere(transform.position, 0.2f);
+        Gizmos.DrawWireSphere(transform.position, 0.4f);
     }
 
     public enum States {
